@@ -41,11 +41,14 @@ extern "C" {
 #define MAX_INT	"2147483647"
 
 #define OUTPUT_TOKENS	     1
-#define OUTPUT_PRODUCTIONS 1
-#define OUTPUT_ST_MGT      1
+#define OUTPUT_PRODUCTIONS   1
+#define OUTPUT_ST_MGT        1
 
-#define POSITIVE		1
-#define NEGATIVE		-1
+#define POSITIVE	     1
+#define NEGATIVE	    -1
+
+#define LOGICAL_OP         100
+#define ARITHMETIC_OP      101
 
 int lineNum = 1;                   // source line number
 
@@ -89,7 +92,8 @@ list<string> variableNames;		  // list of declared variables
 %type <typeInfo> N_VARIDENT N_FACTOR N_TERM N_VARIABLE 
 %type <typeInfo> N_INPUTVAR N_TYPE
 %type <typeInfo> N_IDXRANGE N_EXPR N_SIMPLE N_SIMPLEEXPR 
-%type <typeInfo> N_PROCIDENT N_PROCSTMT N_IDXVAR 
+%type <typeInfo> N_PROCIDENT N_PROCSTMT N_IDXVAR
+%type <intValue> N_ADDOP N_MULTOP
 
 /*
  *  To eliminate ambiguities.
@@ -113,13 +117,15 @@ N_START         : N_PROG
 			    return 0;
                     }
                 ;
-N_ADDOP         : N_ADDOPLOG
+N_ADDOP         : N_ADDOPLOGICAL
 		    {
-		    prRule("N_ADDOP", "N_ADDOPLOG");
+		    prRule("N_ADDOP", "N_ADDOPLOGICAL");
+		    $$.type = LOGICAL_OP;
 		    }
 		| N_ADDOPARITH
 		    {
 		    prRule("N_ADDOP", N_ADDOPARITH");
+		    $$.type = ARITHMETIC_OP;
 		    }
 		;    
 N_ADDOPLOGICAL  : T_OR
@@ -367,10 +373,12 @@ N_INTCONST      : N_SIGN T_INTCONST
 N_MULTOP        : N_MULTOPLOG
 		    {
 		    prRule("N_MULTOP", "N_MULTOPLOG");
+		    $$ = LOGICAL_OP;
 		    }
 		| N_MULTOPARITH
 		    {
 		    prRule("N_MUTLOP", "N_MULTOPARITH");
+		    $$ = ARITHMETIC_OP;
 		    }
 		;
 N_MULTOPLOG     : T_AND
