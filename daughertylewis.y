@@ -456,7 +456,7 @@ N_PROCIDENT     : T_IDENT
                     prRule("N_PROCIDENT", "T_IDENT");
 			    string ident = string($1);
                 	    TYPE_INFO typeInfo = 
-						findEntryInAnyScope(ident);
+					findEntryInAnyScope(ident);
                 	    if (typeInfo.type == UNDEFINED) {
                 	      yyerror("Undefined identifier");
                 	      return(0);
@@ -716,12 +716,16 @@ N_VARIDENT      : T_IDENT
                 	    if (typeInfo.type == UNDEFINED) {
                 	      yyerror("Undefined identifier");
                 	      return(0);
-               	    }
+               	            }
+               	            if ( typeInfo.type != IDENT){
+               	              yyerror("Procedure/variable mismatch");
+               	              return(0);
+               	            }
 			    $$.type = typeInfo.type;
 			    $$.startIndex = typeInfo.startIndex;
 			    $$.endIndex = typeInfo.endIndex;
 			    $$.baseType = typeInfo.baseType;
-			    }
+	            }
                 ;
 N_WHILE         : T_WHILE N_EXPR T_DO N_STMT
                     {
