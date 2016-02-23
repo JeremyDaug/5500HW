@@ -113,19 +113,30 @@ N_START         : N_PROG
 			    return 0;
                     }
                 ;
-N_ADDOP         : T_PLUS
+N_ADDOP         : N_ADDOPLOG
+		    {
+		    prRule("N_ADDOP", "N_ADDOPLOG");
+		    }
+		| N_ADDOPARITH
+		    {
+		    prRule("N_ADDOP", N_ADDOPARITH");
+		    }
+		;    
+N_ADDOPLOGICAL  : T_OR
+		    {
+		    prRule("N_ADDOPLOGICAL", "T_OR");
+		    }
+		;
+N_ADDOPARITH    : T_PLUS
                     {
-                    prRule("N_ADDOP", "T_PLUS");
+                    prRule("N_ADDOPARITH", "T_PLUS");
                     }
                 | T_MINUS
                     {
-                    prRule("N_ADDOP", "T_MINUS");
-                    }
-                | T_OR
-                    {
-                    prRule("N_ADDOP", "T_OR");
+                    prRule("N_ADDOPARITH", "T_MINUS");
                     }
                 ;
+		   
 N_ADDOPLST      : /* epsilon */
                     {
                     prRule("N_ADDOPLST", "epsilon");
@@ -353,17 +364,27 @@ N_INTCONST      : N_SIGN T_INTCONST
 			    $$ = $1 * $2;
                     }
                 ;
-N_MULTOP        : T_MULT
+N_MULTOP        : N_MULTOPLOG
+		    {
+		    prRule("N_MULTOP", "N_MULTOPLOG");
+		    }
+		| N_MULTOPARITH
+		    {
+		    prRule("N_MUTLOP", "N_MULTOPARITH");
+		    }
+		;
+N_MULTOPLOG     : T_AND
                     {
-                    prRule("N_MULTOP", "T_MULT");
+                    prRule("N_MULTOPLOG", "T_AND");
+                    }
+                ;
+N_MULTOPARITH   : T_MULT
+                    {
+                    prRule("N_MULTOPARITH", "T_MULT");
                     }
                 | T_DIV
                     {
-                    prRule("N_MULTOP", "T_DIV");
-                    }
-                | T_AND
-                    {
-                    prRule("N_MULTOP", "T_AND");
+                    prRule("N_MULTOPARITH", "T_DIV");
                     }
                 ;
 N_MULTOPLST     : /* epsilon */
