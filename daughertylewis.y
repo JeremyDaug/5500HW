@@ -177,6 +177,11 @@ N_ASSIGN        : N_VARIABLE T_ASSIGN N_EXPR
                     {
                     prRule("N_ASSIGN", 
                            "N_VARIABLE T_ASSIGN N_EXPR");
+                           
+                    if($1.type == ARRAY)
+                    {
+                        yyerror("Cannot make assignment to an array");
+                    }
                     }
                 ;
 N_BLOCK         : N_VARDECPART N_PROCDECPART N_STMTPART
