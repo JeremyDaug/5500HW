@@ -167,10 +167,15 @@ N_ARRAY         : T_ARRAY T_LBRACK N_IDXRANGE T_RBRACK T_OF
 N_ARRAYVAR      : N_ENTIREVAR
                     {
                     prRule("N_ARRAYVAR", "N_ENTIREVAR");
-			    $$.type = $1.type; 
+		    $$.type = $1.type; 
                     $$.startIndex = $1.startIndex;
                     $$.endIndex = $1.endIndex;
-		         $$.baseType = $1.baseType;
+		    $$.baseType = $1.baseType;
+		    
+		    if($$.type != $1.type){
+		      yyerror("Indexed variable must be of array type");
+		      return(0);
+		      }
                     }
                 ;
 N_ASSIGN        : N_VARIABLE T_ASSIGN N_EXPR
@@ -670,8 +675,11 @@ N_VARDEC        : N_IDENT N_IDENTLST T_COLON N_TYPE
                 	       if (! success) {
                          yyerror("Multiply defined identifier");
                          return(0);
-               	       }
-				}
+               	         }
+               	         if( $$.startIndex > $$.endIndex ){
+               	           yyerror("Start index must be less than or equal to end Index of array")
+               	           return(0);
+               	           }
                      variableNames.clear();
                     }
                 ;
