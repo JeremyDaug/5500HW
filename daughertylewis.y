@@ -823,7 +823,7 @@ void prRule(const char *lhs, const char *rhs)
 
 int yyerror(const char *s) 
 {
-  //printf("Line %d: %s\n", lineNum, s);
+  printf("Line %d: %s\n", lineNum, s);
   cleanUp();
   exit(1);
 }
