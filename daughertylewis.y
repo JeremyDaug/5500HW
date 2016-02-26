@@ -93,7 +93,7 @@ list<string> variableNames;		  // list of declared variables
 %type <typeInfo> N_INPUTVAR N_TYPE
 %type <typeInfo> N_IDXRANGE N_EXPR N_SIMPLE N_SIMPLEEXPR 
 %type <typeInfo> N_PROCIDENT N_PROCSTMT N_IDXVAR
-%type <intValue> N_ADDOP N_MULTOP
+%type <num> N_ADDOP N_MULTOP 
 
 /*
  *  To eliminate ambiguities.
@@ -120,12 +120,12 @@ N_START         : N_PROG
 N_ADDOP         : N_ADDOPLOGICAL
 		    {
 		    prRule("N_ADDOP", "N_ADDOPLOGICAL");
-		    $$.type = LOGICAL_OP;
+		    $$ = LOGICAL_OP;
 		    }
 		| N_ADDOPARITH
 		    {
-		    prRule("N_ADDOP", N_ADDOPARITH");
-		    $$.type = ARITHMETIC_OP;
+		    prRule("N_ADDOP", "N_ADDOPARITH");
+		    $$ = ARITHMETIC_OP;
 		    }
 		;    
 N_ADDOPLOGICAL  : T_OR
@@ -167,15 +167,14 @@ N_ARRAY         : T_ARRAY T_LBRACK N_IDXRANGE T_RBRACK T_OF
 N_ARRAYVAR      : N_ENTIREVAR
                     {
                     prRule("N_ARRAYVAR", "N_ENTIREVAR");
+                    if($1.type != ARRAY){
+		        yyerror("Indexed variable must be of array type");
+		        return(0);
+		    }
 		    $$.type = $1.type; 
                     $$.startIndex = $1.startIndex;
                     $$.endIndex = $1.endIndex;
 		    $$.baseType = $1.baseType;
-		    
-		    if($$.type != $1.type){
-		      yyerror("Indexed variable must be of array type");
-		      return(0);
-		      }
                     }
                 ;
 N_ASSIGN        : N_VARIABLE T_ASSIGN N_EXPR
@@ -186,6 +185,10 @@ N_ASSIGN        : N_VARIABLE T_ASSIGN N_EXPR
                     if($1.type == ARRAY)
                     {
                         yyerror("Cannot make assignment to an array");
+                    }
+                    else if($1.type != $3.type)
+                    {
+                        yyerror("Expression must be of same type as variable");
                     }
                     }
                 ;
@@ -276,6 +279,10 @@ N_EXPR          : N_SIMPLEEXPR
                     {
                     prRule("N_EXPR", 
                            "N_SIMPLEEXPR N_RELOP N_SIMPLEEXPR");
+                    if($1.type != $3.type)
+                    {
+                        yyerror("Expressions must both be int, or both char, or both boolean");
+                    }
 			    $$.type = BOOL; 
                     $$.startIndex = NOT_APPLICABLE;
                     $$.endIndex = NOT_APPLICABLE;
@@ -285,6 +292,11 @@ N_EXPR          : N_SIMPLEEXPR
 N_FACTOR        : N_SIGN N_VARIABLE
                     {
                     prRule("N_FACTOR", "N_SIGN N_VARIABLE");
+                    if(($1 != NOT_APPLICABLE) && ($2.type != INT))
+                    {
+                        yyerror("Expression must be of type integer");
+                    }
+
       		    $$.type = $2.type; 
                     $$.startIndex = $2.startIndex;
                     $$.endIndex = $2.endIndex;
@@ -353,6 +365,10 @@ N_IDXVAR        : N_ARRAYVAR T_LBRACK N_EXPR T_RBRACK
                     {
                     prRule("N_IDXVAR", 
                           "N_ARRAYVAR T_LBRACK N_EXPR T_RBRACK");
+                    if($3.type != INT)
+                    {
+                        yyerror("Index expression muts be of type integer");
+                    }
                     }
                 ;
 N_INPUTLST      : /* epsilon */
@@ -368,6 +384,10 @@ N_INPUTLST      : /* epsilon */
 N_INPUTVAR      : N_VARIABLE
                     {
                     prRule("N_INPUTVAR", "N_VARIABLE");
+                    if(!($1.type & INT_OR_CHAR)) // Bitwise check of either int or char
+                    {
+                        yyerror("Input variable must be of type integer or char");
+                    }
 			    $$.type = $1.type; 
                     $$.startIndex = $1.startIndex;
                     $$.endIndex = $1.endIndex;
@@ -412,11 +432,19 @@ N_MULTOPLST     : /* epsilon */
                 | N_MULTOP N_FACTOR N_MULTOPLST
                     {
                     prRule("N_MULTOPLST", "N_MULTOP N_FACTOR N_MULTOPLST");
+                    if($2.type != INT)
+                    {
+                        yyerror("Expression must be of type integer");
+                    }
                     }
                 ;
 N_OUTPUT        : N_EXPR
                     {
                     prRule("N_OUTPUT", "N_EXPR");
+                    if(!($1.type & INT_OR_CHAR)) // bitwise check
+                    {
+                        yyerror("Output expression must be of type integer or char");
+                    }
                     }
                 ;
 N_OUTPUTLST     : /* epsilon */
@@ -540,7 +568,7 @@ N_RELOP         : T_LT
 N_SIGN          : /* epsilon */
                     {
                     prRule("N_SIGN", "epsilon");
-			    $$ = POSITIVE;
+			    $$ = NOT_APPLICABLE;
                     }
                 | T_PLUS
                     {
@@ -666,21 +694,26 @@ N_VARDEC        : N_IDENT N_IDENTLST T_COLON N_TYPE
 			    variableNames.push_front(varName);
 		
 			    for (std::list<string>::iterator
-                          it=variableNames.begin();
-			          it != variableNames.end(); it++) {
+                                 it=variableNames.begin();
+			         it != variableNames.end(); it++)
+                            {
 				 string varName = string(*it);
-			       prSymbolTableAddition(varName, $4);
-                       bool success = scopeStack.top().addEntry
-                               (SYMBOL_TABLE_ENTRY(varName, $4));
-                	       if (! success) {
-                         yyerror("Multiply defined identifier");
-                         return(0);
-               	         }
-               	         if( $$.startIndex > $$.endIndex ){
-               	           yyerror("Start index must be less than or equal to end Index of array")
-               	           return(0);
-               	           }
-                     variableNames.clear();
+			         prSymbolTableAddition(varName, $4);
+                                 if( $4.startIndex > $4.endIndex )
+                                 {
+               	                     yyerror("Start index must be less than or equal to end Index of array");
+               	                     return(0);
+               	                 }
+                                 bool success = scopeStack.top().addEntry
+                                         (SYMBOL_TABLE_ENTRY(varName, $4));
+                                 
+                	         if (! success)
+                                 {
+                                     yyerror("Multiply defined identifier");
+                                     return(0);
+                                 }
+               	            }
+                        variableNames.clear();
                     }
                 ;
 N_VARDECLST     : /* epsilon */
@@ -730,7 +763,7 @@ N_VARIDENT      : T_IDENT
                 	      yyerror("Undefined identifier");
                 	      return(0);
                	            }
-               	            if ( typeInfo.type != IDENT){
+               	            if ( typeInfo.type == PROCEDURE){
                	              yyerror("Procedure/variable mismatch");
                	              return(0);
                	            }
@@ -744,6 +777,10 @@ N_WHILE         : T_WHILE N_EXPR T_DO N_STMT
                     {
                     prRule("N_WHILE", 
                            "T_WHILE N_EXPR T_DO N_STMT");
+                    if($2.type != BOOL)
+                    {
+                        yyerror("Expression must be of type boolean");
+                    }
                     }
                 ;
 N_WRITE         : T_WRITE T_LPAREN N_OUTPUT N_OUTPUTLST T_RPAREN
@@ -905,3 +942,4 @@ int main()
 
   cleanUp();
   return 0;
+}
