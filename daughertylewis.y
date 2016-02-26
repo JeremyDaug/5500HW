@@ -379,7 +379,7 @@ N_IDXVAR        : N_ARRAYVAR T_LBRACK N_EXPR T_RBRACK
                           "N_ARRAYVAR T_LBRACK N_EXPR T_RBRACK");
                     if($3.type != INT)
                     {
-                        yyerror("Index expression muts be of type integer");
+                        yyerror("Index expression must be of type integer");
                     }
                     $$.type = $1.baseType;
                     $$.startIndex = NOT_APPLICABLE;
