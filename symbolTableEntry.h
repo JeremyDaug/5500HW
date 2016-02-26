@@ -15,7 +15,7 @@ using namespace std;
 #define INT_OR_CHAR_OR_BOOL		7
 #define ARRAY				8
 #define INDEX_RANGE			9
-#define PROGRAM				10
+#define PROGRAM				16
 
 #define NOT_APPLICABLE 		-1
 

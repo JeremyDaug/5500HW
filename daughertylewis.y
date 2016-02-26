@@ -45,6 +45,7 @@ extern "C" {
 #define OUTPUT_ST_MGT        1
 
 #define POSITIVE	     1
+#define UNSIGNED             0
 #define NEGATIVE	    -1
 
 #define LOGICAL_OP         100
@@ -186,6 +187,11 @@ N_ASSIGN        : N_VARIABLE T_ASSIGN N_EXPR
                     {
                         yyerror("Cannot make assignment to an array");
                     }
+                    else if($3.type == ARRAY)
+                    {
+                        if($3.baseType != $1.type)
+                            yyerror("Expression must be of same type as variable");
+                    }
                     else if($1.type != $3.type)
                     {
                         yyerror("Expression must be of same type as variable");
@@ -226,11 +232,15 @@ N_CONDITION     : T_IF N_EXPR T_THEN N_STMT
                     {
                     prRule("N_CONDITION", 
                            "T_IF N_EXPR T_THEN N_STMT");
+                    if($2.type != BOOL)
+                        yyerror("Expression must be of type boolean");
                     }
                 | T_IF N_EXPR T_THEN N_STMT T_ELSE N_STMT
                     {
                     prRule("N_CONDITION",
                       "T_IF N_EXPR T_THEN N_STMT T_ELSE N_STMT");
+                    if($2.type != BOOL)
+                        yyerror("Expression must be of type boolean");
                     }
                 ;
 N_CONST         : N_INTCONST
@@ -292,7 +302,7 @@ N_EXPR          : N_SIMPLEEXPR
 N_FACTOR        : N_SIGN N_VARIABLE
                     {
                     prRule("N_FACTOR", "N_SIGN N_VARIABLE");
-                    if(($1 != NOT_APPLICABLE) && ($2.type != INT))
+                    if(($1 != UNSIGNED) && ($2.type != INT))
                     {
                         yyerror("Expression must be of type integer");
                     }
@@ -322,7 +332,9 @@ N_FACTOR        : N_SIGN N_VARIABLE
                 | T_NOT N_FACTOR
                     {
                     prRule("N_FACTOR", "T_NOT N_FACTOR");
-			    $$.type = BOOL; 
+			    $$.type = BOOL;
+                    if($2.type != BOOL)
+                        yyerror("Expression must be of type boolean");
                     $$.startIndex = NOT_APPLICABLE;
                     $$.endIndex = NOT_APPLICABLE;
 		         $$.baseType = NOT_APPLICABLE;
@@ -369,6 +381,10 @@ N_IDXVAR        : N_ARRAYVAR T_LBRACK N_EXPR T_RBRACK
                     {
                         yyerror("Index expression muts be of type integer");
                     }
+                    $$.type = $1.baseType;
+                    $$.startIndex = NOT_APPLICABLE;
+                    $$.endIndex = NOT_APPLICABLE;
+                    $$.baseType = NOT_APPLICABLE;
                     }
                 ;
 N_INPUTLST      : /* epsilon */
@@ -432,9 +448,13 @@ N_MULTOPLST     : /* epsilon */
                 | N_MULTOP N_FACTOR N_MULTOPLST
                     {
                     prRule("N_MULTOPLST", "N_MULTOP N_FACTOR N_MULTOPLST");
-                    if($2.type != INT)
+                    if(($2.type != INT) && ($1 == ARITHMETIC_OP))
                     {
                         yyerror("Expression must be of type integer");
+                    }
+                    if(($2.type != BOOL) && ($1 == LOGICAL_OP))
+                    {
+                        yyerror("Expression must be of type boolean");
                     }
                     }
                 ;
@@ -568,7 +588,7 @@ N_RELOP         : T_LT
 N_SIGN          : /* epsilon */
                     {
                     prRule("N_SIGN", "epsilon");
-			    $$ = NOT_APPLICABLE;
+			    $$ = UNSIGNED;
                     }
                 | T_PLUS
                     {
@@ -796,14 +816,14 @@ extern FILE *yyin;
 
 void prRule(const char *lhs, const char *rhs) 
 {
-  if (OUTPUT_PRODUCTIONS)
-    printf("%s -> %s\n", lhs, rhs);
+  //if (OUTPUT_PRODUCTIONS)
+    //printf("%s -> %s\n", lhs, rhs);
   return;
 }
 
 int yyerror(const char *s) 
 {
-  printf("Line %d: %s\n", lineNum, s);
+  //printf("Line %d: %s\n", lineNum, s);
   cleanUp();
   exit(1);
 }
@@ -853,22 +873,22 @@ void ignoreComment()
 void printTokenInfo(const char* tokenType, 
                     const char* lexeme) 
 {
-  if (OUTPUT_TOKENS)
-    printf("TOKEN: %-15s  LEXEME: %s\n", tokenType, lexeme);
+  //if (OUTPUT_TOKENS)
+    //printf("TOKEN: %-15s  LEXEME: %s\n", tokenType, lexeme);
 }
 
 void beginScope() 
 {
   scopeStack.push(SYMBOL_TABLE());
-  if (OUTPUT_ST_MGT) 
-    printf("\n___Entering new scope...\n\n");
+  //if (OUTPUT_ST_MGT) 
+    //printf("\n___Entering new scope...\n\n");
 }
 
 void endScope() 
 {
   scopeStack.pop();
-  if (OUTPUT_ST_MGT) 
-    printf("\n___Exiting scope...\n\n");
+  //if (OUTPUT_ST_MGT) 
+    //printf("\n___Exiting scope...\n\n");
 }
 
 void prSymbolTableAddition(const string identName, 
@@ -878,9 +898,9 @@ void prSymbolTableAddition(const string identName,
   {
    char *cstr = new char[identName.length() + 1];
    strcpy(cstr, identName.c_str());
-   printf("___Adding %s to symbol table with type ", cstr);
+   //printf("___Adding %s to symbol table with type ", cstr);
    delete [] cstr;
-   switch (typeInfo.type) {
+   /*switch (typeInfo.type) {
 	case PROGRAM	: printf("PROGRAM\n"); break;
 	case PROCEDURE	: printf("PROCEDURE\n"); break;
 	case INT		: printf("INTEGER\n"); break;
@@ -891,18 +911,18 @@ void prSymbolTableAddition(const string identName,
 				         typeInfo.startIndex, 
 				         typeInfo.endIndex);
 				  switch (typeInfo.baseType) {
-				    case INT : printf("INTEGER\n"); 
+				    case INT : printf("INTEGER\n");
                                      break;
-				    case CHAR: printf("CHAR\n"); 
+				    case CHAR: printf("CHAR\n");
                                      break;
-				    case BOOL: printf("BOOLEAN\n"); 
+				    case BOOL: printf("BOOLEAN\n");
                                      break;
-				    default  : printf("UNKNOWN\n"); 
+				    default  : printf("UNKNOWN\n");
                                      break;
 				  }
 				  break;
-	default 		: printf("UNKNOWN\n"); break;
-   }
+	default 		: printf("UNKNOWN\n");/* break;
+   }*/
   }
 }
 
